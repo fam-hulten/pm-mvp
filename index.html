@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Johannas Projektledning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+        
+        .app { display: flex; height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { width: 280px; background: #16213e; padding: 20px; border-right: 1px solid #0f3460; }
+        .sidebar h2 { font-size: 14px; color: #888; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+        .project-item { padding: 12px 16px; border-radius: 8px; cursor: pointer; margin-bottom: 8px; transition: background 0.2s; }
+        .project-item:hover { background: #1a1a2e; }
+        .project-item.active { background: #0f3460; }
+        .project-item .name { font-weight: 500; }
+        .project-item .task-count { font-size: 12px; color: #888; margin-top: 4px; }
+        
+        .add-project-btn { width: 100%; padding: 12px; background: #0f3460; border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 14px; margin-top: 16px; }
+        .add-project-btn:hover { background: #1a4a80; }
+        
+        /* Main area */
+        .main { flex: 1; padding: 30px; overflow-y: auto; }
+        .main-header { margin-bottom: 30px; }
+        .main-header h1 { font-size: 24px; margin-bottom: 8px; }
+        .main-header p { color: #888; }
+        
+        /* Task list */
+        .task-list { list-style: none; }
+        .task-item { background: #16213e; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+        .task-item.subtask { background: #1a1a2e; margin-left: 24px; border-left: 3px solid #0f3460; }
+        
+        .task-header { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+        .task-title { flex: 1; font-weight: 500; }
+        .task-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-Johanna { background: #e94560; }
+        .badge-Lilly { background: #0f3460; }
+        .badge-Robert { background: #533483; }
+        
+        .task-controls { display: flex; gap: 8px; align-items: center; }
+        select { background: #1a1a2e; border: 1px solid #0f3460; color: #eee; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        button { background: #0f3460; border: none; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        button:hover { background: #1a4a80; }
+        button.delete { background: #e94560; }
+        button.delete:hover { background: #ff6b6b; }
+        
+        .subtask-list { list-style: none; margin-left: 20px; border-left: 2px solid #0f3460; padding-left: 16px; margin-top: 12px; }
+        
+        /* Add task form */
+        .add-task-form { background: #16213e; border-radius: 12px; padding: 20px; margin-top: 24px; }
+        .add-task-form h3 { margin-bottom: 16px; font-size: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #888; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 14px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; color: #eee; font-size: 14px; }
+        .form-actions { display: flex; gap: 12px; }
+        .form-actions button.primary { background: #e94560; }
+        .form-actions button.primary:hover { background: #ff6b6b; }
+        
+        /* Settings */
+        .settings-section { background: #16213e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .settings-section h3 { margin-bottom: 16px; font-size: 16px; }
+        .settings-section input { width: 100%; padding: 10px 14px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 8px; color: #eee; font-size: 14px; margin-bottom: 12px; }
+        
+        /* Collapsible */
+        .collapse-toggle { cursor: pointer; user-select: none; }
+        .collapse-toggle::before { content: '▼ '; font-size: 10px; }
+        .collapsed .collapse-toggle::before { content: '▶ '; }
+        .collapsed .subtask-list { display: none; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <h2>Projekt</h2>
+            <div id="projectList"></div>
+            <button class="add-project-btn" onclick="showAddProject()">+ Nytt Projekt</button>
+        </div>
+        <div class="main">
+            <div id="projectView" style="display:none;">
+                <div class="main-header">
+                    <h1 id="projectName">Projekt</h1>
+                    <p id="projectStats">0 uppgifter</p>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>📢 Discord Webhook</h3>
+                    <input type="text" id="discordWebhook" placeholder="https://discord.com/api/webhooks/..." onchange="saveSettings()">
+                    <small style="color:#888">Notifikationer skickas hit när uppgifter tilldelas</small>
+                </div>
+                
+                <div id="taskList" class="task-list"></div>
+                
+                <div class="add-task-form">
+                    <h3>➕ Lägg till uppgift</h3>
+                    <div class="form-group">
+                        <label>Titel</label>
+                        <input type="text" id="taskTitle" placeholder="Vad ska göras?">
+                    </div>
+                    <div class="form-group">
+                        <label>Ansvarig</label>
+                        <select id="taskAssignee">
+                            <option value="Johanna">Johanna</option>
+                            <option value="Lilly">Lilly</option>
+                            <option value="Robert">Robert</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Underuppgift till (valfritt)</label>
+                        <select id="taskParent">
+                            <option value="">Ingen (huvuduppgift)</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button class="primary" onclick="addTask()">Lägg till</button>
+                        <button onclick="hideAddTask()">Avbryt</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="emptyState" style="text-align:center; margin-top:100px; color:#888;">
+                <p style="font-size:48px;">📋</p>
+                <p>Välj ett projekt eller skapa ett nytt</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data
+        let data = { projects: [], tasks: [] };
+        let currentProjectId = null;
+        
+        // Load from localStorage
+        function loadData() {
+            const saved = localStorage.getItem('johanna_pm_data');
+            if (saved) {
+                data = JSON.parse(saved);
+            }
+        }
+        
+        function saveData() {
+            localStorage.setItem('johanna_pm_data', JSON.stringify(data));
+        }
+        
+        function saveSettings() {
+            localStorage.setItem('johanna_pm_discord_webhook', document.getElementById('discordWebhook').value);
+        }
+        
+        function loadSettings() {
+            document.getElementById('discordWebhook').value = localStorage.getItem('johanna_pm_discord_webhook') || '';
+        }
+        
+        // Projects
+        function renderProjects() {
+            const list = document.getElementById('projectList');
+            list.innerHTML = data.projects.map(p => {
+                const taskCount = data.tasks.filter(t => t.projectId === p.id).length;
+                return `
+                    <div class="project-item ${p.id === currentProjectId ? 'active' : ''}" onclick="selectProject('${p.id}')">
+                        <div class="name">${p.name}</div>
+                        <div class="task-count">${taskCount} uppgifter</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function showAddProject() {
+            const name = prompt('Projektnamn:');
+            if (name) {
+                const project = {
+                    id: Date.now().toString(),
+                    name: name,
+                    createdAt: new Date().toISOString()
+                };
+                data.projects.push(project);
+                saveData();
+                renderProjects();
+                selectProject(project.id);
+            }
+        }
+        
+        function selectProject(id) {
+            currentProjectId = id;
+            renderProjects();
+            renderTasks();
+            document.getElementById('projectView').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            const project = data.projects.find(p => p.id === id);
+            document.getElementById('projectName').textContent = project.name;
+        }
+        
+        // Tasks
+        function renderTasks() {
+            const list = document.getElementById('taskList');
+            const projectTasks = data.tasks.filter(t => t.projectId === currentProjectId);
+            
+            // Root tasks only
+            const rootTasks = projectTasks.filter(t => !t.parentTaskId);
+            
+            list.innerHTML = rootTasks.map(task => renderTask(task, projectTasks)).join('');
+            updateStats();
+        }
+        
+        function renderTask(task, allTasks) {
+            const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
+            const subtasksHtml = subtasks.map(st => renderTask(st, allTasks)).join('');
+            
+            return `
+                <li class="task-item">
+                    <div class="task-header">
+                        <span class="task-title">${task.title}</span>
+                        <span class="task-badge badge-${task.assignee}">${task.assignee}</span>
+                        <select onchange="updateStatus('${task.id}', this.value)">
+                            <option value="prepared" ${task.status === 'prepared' ? 'selected' : ''}>📋 Förbereds</option>
+                            <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>🔨 Pågår</option>
+                            <option value="approved" ${task.status === 'approved' ? 'selected' : ''}>✅ Klar</option>
+                        </select>
+                        <button onclick="deleteTask('${task.id}')" class="delete">🗑</button>
+                    </div>
+                    <button onclick="showAddSubtask('${task.id}')" style="margin-left:0;">+ Lägg till underuppgift</button>
+                    ${subtasks.length > 0 ? `<ul class="subtask-list">${subtasksHtml}</ul>` : ''}
+                </li>
+            `;
+        }
+        
+        function updateStats() {
+            const count = data.tasks.filter(t => t.projectId === currentProjectId).length;
+            document.getElementById('projectStats').textContent = `${count} uppgifter`;
+        }
+        
+        function showAddTask() {
+            document.querySelector('.add-task-form').style.display = 'block';
+            populateParentDropdown();
+        }
+        
+        function hideAddTask() {
+            document.querySelector('.add-task-form').style.display = 'none';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskParent').value = '';
+        }
+        
+        function populateParentDropdown() {
+            const select = document.getElementById('taskParent');
+            const projectTasks = data.tasks.filter(t => t.projectId === currentProjectId && !t.parentTaskId);
+            select.innerHTML = '<option value="">Ingen (huvuduppgift)</option>' + 
+                projectTasks.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+        }
+        
+        function showAddSubtask(parentId) {
+            document.querySelector('.add-task-form').style.display = 'block';
+            populateParentDropdown();
+            document.getElementById('taskParent').value = parentId;
+        }
+        
+        function addTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const assignee = document.getElementById('taskAssignee').value;
+            const parentTaskId = document.getElementById('taskParent').value || null;
+            
+            if (!title) {
+                alert('Ange en titel');
+                return;
+            }
+            
+            const task = {
+                id: Date.now().toString(),
+                projectId: currentProjectId,
+                title: title,
+                assignee: assignee,
+                status: 'prepared',
+                parentTaskId: parentTaskId,
+                createdAt: new Date().toISOString()
+            };
+            
+            data.tasks.push(task);
+            saveData();
+            renderTasks();
+            hideAddTask();
+            
+            // Send Discord notification
+            sendDiscordNotification(task);
+        }
+        
+        function updateStatus(taskId, status) {
+            const task = data.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.status = status;
+                saveData();
+            }
+        }
+        
+        function deleteTask(taskId) {
+            // Delete task and all subtasks
+            const toDelete = [taskId];
+            const subtasks = data.tasks.filter(t => t.parentTaskId === taskId);
+            subtasks.forEach(st => toDelete.push(st.id));
+            
+            data.tasks = data.tasks.filter(t => !toDelete.includes(t.id));
+            saveData();
+            renderTasks();
+        }
+        
+        // Discord notification
+        async function sendDiscordNotification(task) {
+            const webhook = localStorage.getItem('johanna_pm_discord_webhook');
+            if (!webhook) return;
+            
+            const project = data.projects.find(p => p.id === task.projectId);
+            const message = {
+                content: `📋 **Ny uppgift tillagd**\n**Projekt:** ${project?.name || 'Okänt'}\n**Uppgift:** ${task.title}\n**Ansvarig:** ${task.assignee}\n**Status:** Förbereds`
+            };
+            
+            try {
+                await fetch(webhook, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message)
+                });
+            } catch (e) {
+                console.log('Discord notification failed:', e);
+            }
+        }
+        
+        // Init
+        loadData();
+        renderProjects();
+        loadSettings();
+    </script>
+</body>
+</html>
